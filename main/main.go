@@ -2,47 +2,40 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
-	"os/signal"
-	"runtime"
 
-	"github.com/v03413/bepusdt/app"
-	"github.com/v03413/bepusdt/app/bot"
+	"github.com/joho/godotenv"
+	"github.com/urfave/cli/v3"
+	"github.com/v03413/bepusdt/app/cmd"
 	"github.com/v03413/bepusdt/app/conf"
-	"github.com/v03413/bepusdt/app/log"
-	"github.com/v03413/bepusdt/app/model"
-	"github.com/v03413/bepusdt/app/task"
-	"github.com/v03413/bepusdt/app/web"
 )
 
-type Initializer func() error
-
-var initializers = []Initializer{conf.Init, log.Init, bot.Init, model.Init, task.Init}
+// PR 开发/贡献说明
+//
+// 个人精力有限，人脑也干不过 AI，为了保持项目的可维护性。
+// 提交 PR 时，请确保一个 PR 只做一件事，并说明以下内容：
+//
+//   - 这个 PR 做了什么
+//   - 为什么要这么做
+//   - Review 重点在哪
+//   - 自测 / 实测情况
 
 func init() {
-	for _, initFunc := range initializers {
-		if err := initFunc(); err != nil {
-
-			panic(fmt.Sprintf("初始化失败: %v", err))
-		}
-	}
+	// 不推荐引导小白参与修改各种配置文件
+	_ = godotenv.Load()
 }
 
 func main() {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	task.Start(ctx)
-	web.Start(ctx)
-
-	fmt.Println("BEpusdt 启动成功，当前版本：" + app.Version)
-
-	{
-		var signals = make(chan os.Signal, 1)
-		signal.Notify(signals, os.Interrupt, os.Kill)
-		<-signals
-		cancel()
-		runtime.GC()
+	c := &cli.Command{
+		Name:  "BEpusdt",
+		Usage: conf.Desc,
+		Commands: []*cli.Command{
+			cmd.Start,
+			cmd.Version,
+			cmd.Reset,
+		},
+	}
+	if err := c.Run(context.Background(), os.Args); err != nil {
+		panic(err)
 	}
 }
